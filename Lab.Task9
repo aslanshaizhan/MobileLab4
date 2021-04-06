@@ -1,0 +1,49 @@
+// Generated classes with main methods
+@RequestMapping(value = "/update/colvir", method = RequestMethod.POST)
+	public ResponseEntity<ResponseInfo> updateColvir(@RequestParam(value = "paymentId", required = true) Long paymentId, @RequestParam(value = "status", required = true) String status) {
+
+		try {
+			ResponseInfo responseInfo = paymentTerminalService.updateStatusFromColvir(paymentId, status);
+			if (responseInfo.getStatus().equals(ResponseStatus.CANCELED)) {
+				//do возврат
+				return new ResponseEntity<>(responseInfo, HttpStatus.NOT_FOUND);
+			} else if (responseInfo.getStatus().equals(ResponseStatus.NOT_FOUND)) {
+				return new ResponseEntity<>(responseInfo, HttpStatus.NOT_FOUND);
+			} else {
+				//ничего не делаем, так как оплат произойдет
+				return new ResponseEntity<>(responseInfo, HttpStatus.OK);
+			}
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+			return new ResponseEntity<>(new ResponseInfo(), HttpStatus.BAD_GATEWAY);
+		}
+	}
+public ResponseInfo updateStatusFromColvir(Long id, String status) throws MalformedURLException {
+		return terminalService.updateStatusFromColvir(id, status);
+	}
+  
+// search and create methods 
+@RequestMapping(value = "/invoices/enot/create", method = RequestMethod.POST)
+	public ResponseEntity<InvoiceResponse> createEnotPaymentInvoice(@RequestBody EnotRequest enotRequest) {
+		try {
+			InvoiceResponse response = paymentService.createEnotInvoice(enotRequest);
+			if (response.getResponseInfo().getStatus().equals(ResponseStatus.CREATED)) {
+				return new ResponseEntity<>(response, HttpStatus.CREATED);
+			} else {
+				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+			}
+		} catch (Exception e) {
+			return new ResponseEntity<>(new InvoiceResponse(), HttpStatus.BAD_GATEWAY);
+		}
+	}
+  public InvoiceResponse createEnotInvoice(EnotRequest enotRequest) throws Exception {
+		String login = Objects.nonNull(SecurityUtils.getCurrentLogin()) ? SecurityUtils.getCurrentLogin() :
+			"anonymous_payment";
+		Optional<UserEntity> userOptional = userRepository.findOneByLogin(login);
+		if (userOptional.isPresent()) {
+			InvoiceData invoiceDataRequest = createInvoiceData(enotRequest);
+			return paymentTerminalService.createInvoice(invoiceDataRequest);
+		} else {
+			return null;
+		}
+	}
